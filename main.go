@@ -29,10 +29,7 @@ func main() {
 	defer listener.Close()
 
 	for {
-		if len(clients) > 2 {
-			fmt.Println("Connections ghir 10 baraka")
-			continue
-		}
+
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println("Error :", err)
@@ -52,6 +49,10 @@ var (
 
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
+	if len(clients) > 2 {
+		conn.Write([]byte("Connections ghir 10 baraka"))
+		return
+	}
 	conn.Write([]byte(welcomeMsg))
 	reader := bufio.NewReader(conn)
 
@@ -62,40 +63,33 @@ func HandleClient(conn net.Conn) {
 	}
 	username = strings.TrimSpace(username)
 	timeNow := time.Now().Format("2006-01-02 15:04:05")
-	SendMessage(fmt.Sprintf("\n🟢 %s has joined the chat\n", username), conn, fmt.Sprintf("[%s][%s]:", timeNow, username))
+	SendMessage(fmt.Sprintf("\n🟢 %s has joined the chat\n", username), conn, timeNow)
 
 	clients[conn] = username
-
-	// conn.Write([]byte("[" + timeNow + "] [" + username + "] :"))
 
 	for {
 		conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
 
 		msg, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("🔴", username, "disconnected")
+			SendMessage(fmt.Sprintf("\n🔴 %s disconnected\n", username), conn, timeNow)
 			break
 		}
 		msg = strings.TrimSpace(msg)
 		if msg == "" {
 			continue
 		}
-		fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
-		SendMessage(fullMsg, conn, "")
-		// for k, v := range messages {
-		// 	if k != conn {
-		// 		k.Write([]byte("[" + v[0] + "] [" + v[1] + "] :" + v[2]))
-		// 	}
-		// }
+		fullMsg := fmt.Sprintf("\n[%s][%s]: %s\n", timeNow, username, msg)
+		SendMessage(fullMsg, conn, timeNow)
 
 	}
 }
 
-func SendMessage(message string, sender net.Conn, str string) {
-	for conn := range clients {
+func SendMessage(message string, sender net.Conn, timeNow string) {
+	for conn, username := range clients {
 		if conn != sender {
 			_, err := conn.Write([]byte(message))
-			_, err2 := conn.Write([]byte(str))
+			_, err2 := conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
 			if err != nil || err2 != nil {
 				fmt.Println("Failed to send message to", clients[conn])
 			}
