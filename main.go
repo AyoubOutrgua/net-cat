@@ -40,11 +40,10 @@ func main() {
 }
 
 var (
-	welcomeMsg   string = "Welcome to TCP-Chat!\n         _nnnn_\n        dGGGGMMb\n       @p~qp~~qMb\n       M|@||@) M|\n       @,----.JM|\n      JS^\\__/  qKL\n     dZP        qKRb\n    dZP          qKKb\n   fZP            SMMb\n   HZM            MMMM\n   FqM            MMMM\n __| \".        |\\dS\"qML\n |    `.       | `' \\Zq\n_)      \\.___.,|     .'\n\\____   )MMMMMP|   .'\n     `-'       `--'\n[ENTER YOUR NAME]:"
-	clients             = make(map[net.Conn]string)
-	messages            = make(map[net.Conn][]string)
-	mutex        sync.Mutex
-	countClients = 0
+	welcomeMsg string = "Welcome to TCP-Chat!\n         _nnnn_\n        dGGGGMMb\n       @p~qp~~qMb\n       M|@||@) M|\n       @,----.JM|\n      JS^\\__/  qKL\n     dZP        qKRb\n    dZP          qKKb\n   fZP            SMMb\n   HZM            MMMM\n   FqM            MMMM\n __| \".        |\\dS\"qML\n |    `.       | `' \\Zq\n_)      \\.___.,|     .'\n\\____   )MMMMMP|   .'\n     `-'       `--'\n[ENTER YOUR NAME]:"
+	clients           = make(map[net.Conn]string)
+	messages   []string
+	mutex      sync.Mutex
 )
 
 func HandleClient(conn net.Conn) {
@@ -55,17 +54,26 @@ func HandleClient(conn net.Conn) {
 	}
 	conn.Write([]byte(welcomeMsg))
 	reader := bufio.NewReader(conn)
-
-	username, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Name read error:", err)
-		return
-	}
-	username = strings.TrimSpace(username)
+	username := ""
 	timeNow := time.Now().Format("2006-01-02 15:04:05")
-	SendMessage(fmt.Sprintf("\n🟢 %s has joined the chat\n", username), conn, timeNow)
+	for {
+		name, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Name read error:", err)
+			return
+		}
+		name = strings.TrimSpace(name)
+		if CheckUsername(name) {
+			conn.Write([]byte("maymknch dir name khawi ....\n"))
+			conn.Write([]byte("[ENTER YOUR NAME]:"))
+		} else {
+			SendMessage(fmt.Sprintf("\n🟢 %s has joined the chat\n", name), conn, timeNow)
 
-	clients[conn] = username
+			clients[conn] = name
+			username = name
+			break
+		}
+	}
 
 	for {
 		conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
@@ -95,4 +103,8 @@ func SendMessage(message string, sender net.Conn, timeNow string) {
 			}
 		}
 	}
+}
+
+func CheckUsername(username string) bool {
+	return username == ""
 }
