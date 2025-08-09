@@ -49,21 +49,31 @@ var (
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
 
+	mutex.Lock()
 	conn.Write([]byte(welcomeMsg))
+	mutex.Unlock()
+
 	reader := bufio.NewReader(conn)
 	username := ""
-	timeNow := time.Now().Format("2006-01-02 15:04:05")
+	timeNow := ""
 	for {
+		timeNow = time.Now().Format("2006-01-02 15:04:05")
 		name, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Println("Name read error:", err)
 			return
 		}
+
+		mutex.Lock()
 		name = strings.TrimSpace(name)
-		if !CheckUsername(name) {
+		mutex.Unlock()
+
+		if !CheckNameMsg(name) {
 			conn.Write([]byte("had smya mchi valid ....\n"))
 			conn.Write([]byte("[ENTER YOUR NAME]:"))
 		} else {
+
+			mutex.Lock()
 			clients[conn] = name
 
 			if len(clients) > 10 {
@@ -76,28 +86,43 @@ func HandleClient(conn net.Conn) {
 			for _, msg := range messages {
 				conn.Write([]byte(msg))
 			}
-
 			username = name
+			mutex.Unlock()
 			break
 		}
 	}
 
 	for {
+		timeNow = time.Now().Format("2006-01-02 15:04:05")
+		mutex.Lock()
 		conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
+		mutex.Unlock()
 
 		msg, err := reader.ReadString('\n')
 		if err != nil {
+
+			mutex.Lock()
 			SendMessage(fmt.Sprintf("🔴 %s disconnected\n", username), conn, timeNow)
 			delete(clients, conn)
+			mutex.Unlock()
+
 			break
 		}
+		mutex.Lock()
 		msg = strings.TrimSpace(msg)
+		mutex.Unlock()
 		if msg == "" {
 			continue
 		}
-		fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
-		SendMessage(fullMsg, conn, timeNow)
-		messages = append(messages, fullMsg)
+		mutex.Lock()
+		if !CheckNameMsg(msg) {
+			SendMessage(fmt.Sprintf("[%s][%s]:\n", timeNow, username), conn, timeNow)
+		} else {
+			fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
+			SendMessage(fullMsg, conn, timeNow)
+			messages = append(messages, fullMsg)
+		}
+		mutex.Unlock()
 	}
 }
 
@@ -113,11 +138,11 @@ func SendMessage(fullMsg string, sender net.Conn, timeNow string) {
 	}
 }
 
-func CheckUsername(username string) bool {
-	if username == "" {
+func CheckNameMsg(nameORmsg string) bool {
+	if nameORmsg == "" {
 		return false
 	}
-	for _, v := range username {
+	for _, v := range nameORmsg {
 		if !(v >= 'a' && v <= 'z' || v >= '0' && v <= '9') {
 			return false
 		}
