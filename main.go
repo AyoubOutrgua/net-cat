@@ -20,7 +20,7 @@ func main() {
 		fmt.Println("[USAGE]: ./TCPChat $port")
 		return
 	}
-	fmt.Println(port)
+	fmt.Println("chat rah bda f port:", port)
 
 	listener, errListen := net.Listen("tcp", ":"+port)
 	if errListen != nil {
@@ -48,10 +48,7 @@ var (
 
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
-	if len(clients) > 2 {
-		conn.Write([]byte("Connections ghir 10 baraka"))
-		return
-	}
+
 	conn.Write([]byte(welcomeMsg))
 	reader := bufio.NewReader(conn)
 	username := ""
@@ -63,13 +60,23 @@ func HandleClient(conn net.Conn) {
 			return
 		}
 		name = strings.TrimSpace(name)
-		if CheckUsername(name) {
-			conn.Write([]byte("maymknch dir name khawi ....\n"))
+		if !CheckUsername(name) {
+			conn.Write([]byte("had smya mchi valid ....\n"))
 			conn.Write([]byte("[ENTER YOUR NAME]:"))
 		} else {
-			SendMessage(fmt.Sprintf("\n🟢 %s has joined the chat\n", name), conn, timeNow)
-
 			clients[conn] = name
+
+			if len(clients) > 10 {
+				conn.Write([]byte("Connections ghir 10 baraka"))
+				return
+			}
+
+			SendMessage(fmt.Sprintf("🟢 %s has joined the chat\n", name), conn, timeNow)
+
+			for _, msg := range messages {
+				conn.Write([]byte(msg))
+			}
+
 			username = name
 			break
 		}
@@ -80,23 +87,24 @@ func HandleClient(conn net.Conn) {
 
 		msg, err := reader.ReadString('\n')
 		if err != nil {
-			SendMessage(fmt.Sprintf("\n🔴 %s disconnected\n", username), conn, timeNow)
+			SendMessage(fmt.Sprintf("🔴 %s disconnected\n", username), conn, timeNow)
+			delete(clients, conn)
 			break
 		}
 		msg = strings.TrimSpace(msg)
 		if msg == "" {
 			continue
 		}
-		fullMsg := fmt.Sprintf("\n[%s][%s]: %s\n", timeNow, username, msg)
+		fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
 		SendMessage(fullMsg, conn, timeNow)
-
+		messages = append(messages, fullMsg)
 	}
 }
 
-func SendMessage(message string, sender net.Conn, timeNow string) {
+func SendMessage(fullMsg string, sender net.Conn, timeNow string) {
 	for conn, username := range clients {
 		if conn != sender {
-			_, err := conn.Write([]byte(message))
+			_, err := conn.Write([]byte("\n" + fullMsg))
 			_, err2 := conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
 			if err != nil || err2 != nil {
 				fmt.Println("Failed to send message to", clients[conn])
@@ -106,5 +114,13 @@ func SendMessage(message string, sender net.Conn, timeNow string) {
 }
 
 func CheckUsername(username string) bool {
-	return username == ""
+	if username == "" {
+		return false
+	}
+	for _, v := range username {
+		if !(v >= 'a' && v <= 'z' || v >= '0' && v <= '9') {
+			return false
+		}
+	}
+	return true
 }
