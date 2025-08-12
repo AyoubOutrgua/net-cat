@@ -46,9 +46,9 @@ func main() {
 			fmt.Println("Error :", err)
 			continue
 		}
-		mutex.Lock()
+		// mutex.Lock()
 		go HandleClient(conn)
-		mutex.Unlock()
+		// mutex.Unlock()
 	}
 }
 
@@ -62,6 +62,14 @@ var (
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
 
+	// check := false
+	if len(clients) > 1 {
+		conn.Write([]byte("Connections ghir 10 baraka"))
+		conn.Close()
+		// check = true
+		return
+	}
+
 	mutex.Lock()
 	conn.Write([]byte(welcomeMsg))
 	mutex.Unlock()
@@ -69,7 +77,7 @@ func HandleClient(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	username := ""
 	timeNow := ""
-	check := false
+	// check := false
 	for {
 		timeNow = time.Now().Format("2006-01-02 15:04:05")
 		name, err := reader.ReadString('\n')
@@ -93,19 +101,19 @@ func HandleClient(conn net.Conn) {
 			mutex.Lock()
 			clients[conn] = name
 
-			if len(clients) > 10 {
-				conn.Write([]byte("Connections ghir 10 baraka"))
-				delete(clients, conn)
-				conn.Close()
-				check = true
-			}
+			// if len(clients) > 10 {
+			// 	conn.Write([]byte("Connections ghir 10 baraka"))
+			// 	delete(clients, conn)
+			// 	conn.Close()
+			// 	check = true
+			// }
 
-			if !check {
-				SendMessage(fmt.Sprintf("🟢 %s has joined the chat\n", name), conn, timeNow)
-				for _, msg := range messages {
-					conn.Write([]byte(msg))
-				}
+			// if !check {
+			SendMessage(fmt.Sprintf("🟢 %s has joined the chat\n", name), conn, timeNow)
+			for _, msg := range messages {
+				conn.Write([]byte(msg))
 			}
+			// }
 			username = name
 			mutex.Unlock()
 			break
@@ -113,35 +121,35 @@ func HandleClient(conn net.Conn) {
 	}
 	for {
 		mutex.Lock()
-		if !check {
+		// if !check {
 
-			timeNow = time.Now().Format("2006-01-02 15:04:05")
-			conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
-			mutex.Unlock()
+		timeNow = time.Now().Format("2006-01-02 15:04:05")
+		conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
+		mutex.Unlock()
 
-			msg, err := reader.ReadString('\n')
-			if err != nil {
-				mutex.Lock()
-				SendMessage(fmt.Sprintf("🔴 %s disconnected\n", username), conn, timeNow)
-				delete(clients, conn)
-				mutex.Unlock()
-				break
-			}
+		msg, err := reader.ReadString('\n')
+		if err != nil {
 			mutex.Lock()
-			msg = strings.TrimSpace(msg)
+			SendMessage(fmt.Sprintf("🔴 %s disconnected\n", username), conn, timeNow)
+			delete(clients, conn)
 			mutex.Unlock()
-			if msg == "" {
-				continue
-			}
-			mutex.Lock()
-			if !IsPrintableRange(msg) {
-				SendMessage(fmt.Sprintf("[%s][%s]: \n", timeNow, username), conn, timeNow)
-			} else {
-				fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
-				SendMessage(fullMsg, conn, timeNow)
-				messages = append(messages, fullMsg)
-			}
+			break
 		}
+		mutex.Lock()
+		msg = strings.TrimSpace(msg)
+		mutex.Unlock()
+		if msg == "" {
+			continue
+		}
+		mutex.Lock()
+		if !IsPrintableRange(msg) {
+			SendMessage("", conn, timeNow)
+		} else {
+			fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
+			SendMessage(fullMsg, conn, timeNow)
+			messages = append(messages, fullMsg)
+		}
+		// }
 		mutex.Unlock()
 	}
 }
@@ -149,10 +157,12 @@ func HandleClient(conn net.Conn) {
 func SendMessage(fullMsg string, sender net.Conn, timeNow string) {
 	for conn, username := range clients {
 		if conn != sender {
-			_, err := conn.Write([]byte("\n" + fullMsg))
-			_, err2 := conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
-			if err != nil || err2 != nil {
-				fmt.Println("Failed to send message to", clients[conn])
+			if fullMsg != "" {
+				_, err := conn.Write([]byte("\n" + fullMsg))
+				_, err2 := conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
+				if err != nil || err2 != nil {
+					fmt.Println("Failed to send message to", clients[conn])
+				}
 			}
 		}
 	}
