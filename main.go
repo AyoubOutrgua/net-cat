@@ -46,9 +46,7 @@ func main() {
 			fmt.Println("Error :", err)
 			continue
 		}
-		// mutex.Lock()
 		go HandleClient(conn)
-		// mutex.Unlock()
 	}
 }
 
@@ -63,7 +61,7 @@ func HandleClient(conn net.Conn) {
 	defer conn.Close()
 
 	// check := false
-	if len(clients) > 1 {
+	if len(clients) > 0 {
 		conn.Write([]byte("Connections ghir 10 baraka"))
 		conn.Close()
 		// check = true
