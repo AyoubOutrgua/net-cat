@@ -6,6 +6,7 @@ import (
 )
 
 func SendMessage(fullMsg string, sender net.Conn, timeNow string) {
+	mutex.Lock()
 	for conn, username := range clients {
 		if conn != sender {
 			if fullMsg != "" {
@@ -17,4 +18,5 @@ func SendMessage(fullMsg string, sender net.Conn, timeNow string) {
 			}
 		}
 	}
+	mutex.Unlock()
 }
