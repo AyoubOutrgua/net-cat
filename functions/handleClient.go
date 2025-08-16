@@ -21,7 +21,8 @@ func HandleClient(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	username := ""
 	timeNow := ""
-	check := false
+	checkConnection := false
+	// checking the name of user is valid
 	for {
 		timeNow = time.Now().Format("2006-01-02 15:04:05")
 		name, err := reader.ReadString('\n')
@@ -70,10 +71,10 @@ func HandleClient(conn net.Conn) {
 				delete(clients, conn)
 				mutex.Unlock()
 				conn.Close()
-				check = true
+				checkConnection = true
 			}
 
-			if !check {
+			if !checkConnection {
 				SendMessage(fmt.Sprintf("%s has joined our chat...\n", username), conn, timeNow)
 				for _, msg := range messages {
 					_, errWrite = conn.Write([]byte(msg))
@@ -86,6 +87,7 @@ func HandleClient(conn net.Conn) {
 			break
 		}
 	}
+
 	for {
 		timeNow = time.Now().Format("2006-01-02 15:04:05")
 		_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
@@ -102,9 +104,6 @@ func HandleClient(conn net.Conn) {
 			break
 		}
 		msg = strings.TrimSpace(msg)
-		if msg == "" {
-			continue
-		}
 		if !IsPrintableRange(msg) {
 			SendMessage("", conn, timeNow)
 		} else {
