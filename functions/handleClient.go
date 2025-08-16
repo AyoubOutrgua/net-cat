@@ -14,7 +14,7 @@ func HandleClient(conn net.Conn) {
 	var errWrite error
 	_, errWrite = conn.Write([]byte(welcomeMsg))
 	if errWrite != nil {
-		fmt.Println("Failed to write message to", clients[conn])
+		fmt.Println(errWrite)
 		return
 	}
 
@@ -36,53 +36,55 @@ func HandleClient(conn net.Conn) {
 		if !IsPrintableRange(username) {
 			_, errWrite = conn.Write([]byte("Invalid Username\n"))
 			if errWrite != nil {
-				fmt.Println("Failed to write message to", clients[conn])
+				fmt.Println(errWrite)
 				return
 			}
 			_, errWrite = conn.Write([]byte("[ENTER YOUR NAME]: "))
 			if errWrite != nil {
-				fmt.Println("Failed to write message to", clients[conn])
+				fmt.Println(errWrite)
 				return
 			}
 		} else if !IsValidUsername(username) {
 			_, errWrite = conn.Write([]byte("Invalid Username\n"))
 			if errWrite != nil {
-				fmt.Println("Failed to write message to", clients[conn])
+				fmt.Println(errWrite)
 				return
 			}
 			_, errWrite = conn.Write([]byte("[ENTER YOUR NAME]: "))
 			if errWrite != nil {
-				fmt.Println("Failed to write message to", clients[conn])
+				fmt.Println(errWrite)
 				return
 			}
 		} else {
 
-			mutex.Lock()
+			mutexClient.Lock()
 			clients[conn] = username
-			mutex.Unlock()
+			mutexClient.Unlock()
 
-			if len(clients) > 2 {
+			if len(clients) > 10 {
 				_, errWrite = conn.Write([]byte("The room is full"))
 				if errWrite != nil {
-					fmt.Println("Failed to write message to", clients[conn])
+					fmt.Println(errWrite)
 					return
 				}
-				mutex.Lock()
+				mutexClient.Lock()
 				delete(clients, conn)
-				mutex.Unlock()
+				mutexClient.Unlock()
 				conn.Close()
 				checkConnection = true
 			}
 
 			if !checkConnection {
 				SendMessage(fmt.Sprintf("%s has joined our chat...\n", username), conn, timeNow)
+				mutexMessage.Lock()
 				for _, msg := range messages {
 					_, errWrite = conn.Write([]byte(msg))
 					if errWrite != nil {
-						fmt.Println("Failed to write message to", clients[conn])
+						fmt.Println(errWrite)
 						return
 					}
 				}
+				mutexMessage.Unlock()
 			}
 			break
 		}
@@ -92,15 +94,15 @@ func HandleClient(conn net.Conn) {
 		timeNow = time.Now().Format("2006-01-02 15:04:05")
 		_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
 		if errWrite != nil {
-			fmt.Println("Failed to write message to", clients[conn])
+			fmt.Println(errWrite)
 			return
 		}
 		msg, err := reader.ReadString('\n')
 		if err != nil {
 			SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn, timeNow)
-			mutex.Lock()
+			mutexClient.Lock()
 			delete(clients, conn)
-			mutex.Unlock()
+			mutexClient.Unlock()
 			break
 		}
 		msg = strings.TrimSpace(msg)
@@ -109,9 +111,9 @@ func HandleClient(conn net.Conn) {
 		} else {
 			fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
 			SendMessage(fullMsg, conn, timeNow)
-			mutex.Lock()
+			mutexMessage.Lock()
 			messages = append(messages, fullMsg)
-			mutex.Unlock()
+			mutexMessage.Unlock()
 		}
 	}
 }
