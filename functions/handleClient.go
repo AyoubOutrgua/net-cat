@@ -24,7 +24,6 @@ func HandleClient(conn net.Conn) {
 	checkConnection := false
 	// checking the name of user is valid
 	for {
-		timeNow = time.Now().Format("2006-01-02 15:04:05")
 		name, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Println("Name read error:", err)
@@ -61,7 +60,7 @@ func HandleClient(conn net.Conn) {
 			clients[conn] = username
 			mutexClient.Unlock()
 
-			if len(clients) > 10 {
+			if len(clients) > 2 {
 				_, errWrite = conn.Write([]byte("The room is full"))
 				if errWrite != nil {
 					fmt.Println(errWrite)
@@ -75,7 +74,7 @@ func HandleClient(conn net.Conn) {
 			}
 
 			if !checkConnection {
-				SendMessage(fmt.Sprintf("%s has joined our chat...\n", username), conn, timeNow)
+				SendMessage(fmt.Sprintf("%s has joined our chat...\n", username), conn)
 				mutexMessage.Lock()
 				for _, msg := range messages {
 					_, errWrite = conn.Write([]byte(msg))
@@ -91,29 +90,32 @@ func HandleClient(conn net.Conn) {
 	}
 
 	for {
-		timeNow = time.Now().Format("2006-01-02 15:04:05")
-		_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
-		if errWrite != nil {
-			fmt.Println(errWrite)
-			return
-		}
-		msg, err := reader.ReadString('\n')
-		if err != nil {
-			SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn, timeNow)
-			mutexClient.Lock()
-			delete(clients, conn)
-			mutexClient.Unlock()
-			break
-		}
-		msg = strings.TrimSpace(msg)
-		if !IsPrintableRange(msg) {
-			SendMessage("", conn, timeNow)
-		} else {
-			fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
-			SendMessage(fullMsg, conn, timeNow)
-			mutexMessage.Lock()
-			messages = append(messages, fullMsg)
-			mutexMessage.Unlock()
+		if !checkConnection {
+			timeNow = time.Now().Format("2006-01-02 15:04:05")
+			_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
+			if errWrite != nil {
+				fmt.Println(errWrite)
+				return
+			}
+			msg, err := reader.ReadString('\n')
+			if err != nil {
+				SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn)
+				mutexClient.Lock()
+				delete(clients, conn)
+				mutexClient.Unlock()
+				break
+			}
+			msg = strings.TrimSpace(msg)
+			if !IsPrintableRange(msg) {
+				SendMessage("", conn)
+			} else {
+				timeNow = time.Now().Format("2006-01-02 15:04:05")
+				fullMsg := fmt.Sprintf("[%s][%s]:%s\n", timeNow, username, msg)
+				SendMessage(fullMsg, conn)
+				mutexMessage.Lock()
+				messages = append(messages, fullMsg)
+				mutexMessage.Unlock()
+			}
 		}
 	}
 }

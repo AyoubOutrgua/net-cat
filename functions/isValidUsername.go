@@ -7,6 +7,7 @@ func IsValidUsername(username string) bool {
 	mutexClient.Lock()
 	for _, client := range clients {
 		if username == client {
+			mutexClient.Unlock()
 			return false
 		}
 	}
