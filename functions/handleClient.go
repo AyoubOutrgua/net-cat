@@ -11,7 +11,12 @@ import (
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
 
-	conn.Write([]byte(welcomeMsg))
+	var errWrite error
+	_, errWrite = conn.Write([]byte(welcomeMsg))
+	if errWrite != nil {
+		fmt.Println("Failed to write message to", clients[conn])
+		return
+	}
 
 	reader := bufio.NewReader(conn)
 	username := ""
@@ -25,22 +30,42 @@ func HandleClient(conn net.Conn) {
 			break
 		}
 
-		name = strings.TrimSpace(name)
+		username = strings.TrimSpace(name)
 
-		if !IsPrintableRange(name) {
-			conn.Write([]byte("Invalid Username\n"))
-			conn.Write([]byte("[ENTER YOUR NAME]: "))
-		} else if !IsValidUsername(name) {
-			conn.Write([]byte("Invalid Username\n"))
-			conn.Write([]byte("[ENTER YOUR NAME]: "))
+		if !IsPrintableRange(username) {
+			_, errWrite = conn.Write([]byte("Invalid Username\n"))
+			if errWrite != nil {
+				fmt.Println("Failed to write message to", clients[conn])
+				return
+			}
+			_, errWrite = conn.Write([]byte("[ENTER YOUR NAME]: "))
+			if errWrite != nil {
+				fmt.Println("Failed to write message to", clients[conn])
+				return
+			}
+		} else if !IsValidUsername(username) {
+			_, errWrite = conn.Write([]byte("Invalid Username\n"))
+			if errWrite != nil {
+				fmt.Println("Failed to write message to", clients[conn])
+				return
+			}
+			_, errWrite = conn.Write([]byte("[ENTER YOUR NAME]: "))
+			if errWrite != nil {
+				fmt.Println("Failed to write message to", clients[conn])
+				return
+			}
 		} else {
 
 			mutex.Lock()
-			clients[conn] = name
+			clients[conn] = username
 			mutex.Unlock()
 
 			if len(clients) > 10 {
-				conn.Write([]byte("The room is full"))
+				_, errWrite = conn.Write([]byte("The room is full"))
+				if errWrite != nil {
+					fmt.Println("Failed to write message to", clients[conn])
+					return
+				}
 				mutex.Lock()
 				delete(clients, conn)
 				mutex.Unlock()
@@ -49,19 +74,26 @@ func HandleClient(conn net.Conn) {
 			}
 
 			if !check {
-				SendMessage(fmt.Sprintf("%s has joined our chat...\n", name), conn, timeNow)
+				SendMessage(fmt.Sprintf("%s has joined our chat...\n", username), conn, timeNow)
 				for _, msg := range messages {
-					conn.Write([]byte(msg))
+					_, errWrite = conn.Write([]byte(msg))
+					if errWrite != nil {
+						fmt.Println("Failed to write message to", clients[conn])
+						return
+					}
 				}
 			}
-			username = name
 			break
 		}
 	}
 	for {
 		if !check {
 			timeNow = time.Now().Format("2006-01-02 15:04:05")
-			conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
+			_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
+			if errWrite != nil {
+				fmt.Println("Failed to write message to", clients[conn])
+				return
+			}
 			msg, err := reader.ReadString('\n')
 			if err != nil {
 				SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn, timeNow)
