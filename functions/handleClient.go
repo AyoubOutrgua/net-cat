@@ -60,7 +60,7 @@ func HandleClient(conn net.Conn) {
 			clients[conn] = username
 			mutex.Unlock()
 
-			if len(clients) > 10 {
+			if len(clients) > 2 {
 				_, errWrite = conn.Write([]byte("The room is full"))
 				if errWrite != nil {
 					fmt.Println("Failed to write message to", clients[conn])
@@ -87,34 +87,32 @@ func HandleClient(conn net.Conn) {
 		}
 	}
 	for {
-		if !check {
-			timeNow = time.Now().Format("2006-01-02 15:04:05")
-			_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
-			if errWrite != nil {
-				fmt.Println("Failed to write message to", clients[conn])
-				return
-			}
-			msg, err := reader.ReadString('\n')
-			if err != nil {
-				SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn, timeNow)
-				mutex.Lock()
-				delete(clients, conn)
-				mutex.Unlock()
-				break
-			}
-			msg = strings.TrimSpace(msg)
-			if msg == "" {
-				continue
-			}
-			if !IsPrintableRange(msg) {
-				SendMessage("", conn, timeNow)
-			} else {
-				fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
-				SendMessage(fullMsg, conn, timeNow)
-				mutex.Lock()
-				messages = append(messages, fullMsg)
-				mutex.Unlock()
-			}
+		timeNow = time.Now().Format("2006-01-02 15:04:05")
+		_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]: ", timeNow, username)))
+		if errWrite != nil {
+			fmt.Println("Failed to write message to", clients[conn])
+			return
+		}
+		msg, err := reader.ReadString('\n')
+		if err != nil {
+			SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn, timeNow)
+			mutex.Lock()
+			delete(clients, conn)
+			mutex.Unlock()
+			break
+		}
+		msg = strings.TrimSpace(msg)
+		if msg == "" {
+			continue
+		}
+		if !IsPrintableRange(msg) {
+			SendMessage("", conn, timeNow)
+		} else {
+			fullMsg := fmt.Sprintf("[%s][%s]: %s\n", timeNow, username, msg)
+			SendMessage(fullMsg, conn, timeNow)
+			mutex.Lock()
+			messages = append(messages, fullMsg)
+			mutex.Unlock()
 		}
 	}
 }
