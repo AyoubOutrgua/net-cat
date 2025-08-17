@@ -90,32 +90,36 @@ func HandleClient(conn net.Conn) {
 	}
 
 	for {
-		if !checkConnection {
-			timeNow = time.Now().Format("2006-01-02 15:04:05")
-			_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
+		timeNow = time.Now().Format("2006-01-02 15:04:05")
+		_, errWrite = conn.Write([]byte(fmt.Sprintf("[%s][%s]:", timeNow, username)))
+		if errWrite != nil {
+			fmt.Println(errWrite)
+			return
+		}
+		msg, err := reader.ReadString('\n')
+		if err != nil {
+			SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn)
+			mutexClient.Lock()
+			delete(clients, conn)
+			mutexClient.Unlock()
+			break
+		}
+		msg = strings.TrimSpace(msg)
+		if len(msg) > 2000 {
+			_, errWrite = conn.Write([]byte("You can't write a message over 2000 letters\n"))
 			if errWrite != nil {
 				fmt.Println(errWrite)
 				return
 			}
-			msg, err := reader.ReadString('\n')
-			if err != nil {
-				SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn)
-				mutexClient.Lock()
-				delete(clients, conn)
-				mutexClient.Unlock()
-				break
-			}
-			msg = strings.TrimSpace(msg)
-			if !IsPrintableRange(msg) {
-				SendMessage("", conn)
-			} else {
-				timeNow = time.Now().Format("2006-01-02 15:04:05")
-				fullMsg := fmt.Sprintf("[%s][%s]:%s\n", timeNow, username, msg)
-				SendMessage(fullMsg, conn)
-				mutexMessage.Lock()
-				messages = append(messages, fullMsg)
-				mutexMessage.Unlock()
-			}
+		} else if !IsPrintableRange(msg) {
+			SendMessage("", conn)
+		} else {
+			timeNow = time.Now().Format("2006-01-02 15:04:05")
+			fullMsg := fmt.Sprintf("[%s][%s]:%s\n", timeNow, username, msg)
+			SendMessage(fullMsg, conn)
+			mutexMessage.Lock()
+			messages = append(messages, fullMsg)
+			mutexMessage.Unlock()
 		}
 	}
 }
