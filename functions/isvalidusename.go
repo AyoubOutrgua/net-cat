@@ -1,5 +1,6 @@
 package functions
 
+// Checking if the entered username is valid
 func IsValidUsername(username string) bool {
 	if len(username) > 15 {
 		return false

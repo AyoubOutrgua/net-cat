@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// A function that send messages to all connections expect the sender's connection
 func SendMessage(fullMsg string, sender net.Conn) {
 	var errWrite error
 	timeNow := time.Now().Format("2006-01-02 15:04:05")

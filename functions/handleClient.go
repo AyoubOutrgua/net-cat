@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Handle the entered connection to join in the room and be able to send and recieve messages
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
 
@@ -27,13 +28,13 @@ func HandleClient(conn net.Conn) {
 		name, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Println("Name read error:", err)
-			break
+			return
 		}
 
 		username = strings.TrimSpace(name)
 
 		if !IsPrintableRange(username) {
-			_, errWrite = conn.Write([]byte("Invalid Username\n"))
+			_, errWrite = conn.Write([]byte("❌​ Invalid Username\n"))
 			if errWrite != nil {
 				fmt.Println(errWrite)
 				return
@@ -44,7 +45,7 @@ func HandleClient(conn net.Conn) {
 				return
 			}
 		} else if !IsValidUsername(username) {
-			_, errWrite = conn.Write([]byte("Invalid Username\n"))
+			_, errWrite = conn.Write([]byte("❌​ Invalid Username\n"))
 			if errWrite != nil {
 				fmt.Println(errWrite)
 				return
@@ -60,7 +61,7 @@ func HandleClient(conn net.Conn) {
 			clients[conn] = username
 			mutexClient.Unlock()
 
-			if len(clients) > 2 {
+			if len(clients) > 10 {
 				_, errWrite = conn.Write([]byte("The room is full"))
 				if errWrite != nil {
 					fmt.Println(errWrite)
@@ -74,7 +75,7 @@ func HandleClient(conn net.Conn) {
 			}
 
 			if !checkConnection {
-				SendMessage(fmt.Sprintf("%s has joined our chat...\n", username), conn)
+				SendMessage(fmt.Sprintf("🟢 %s has joined our chat...\n", username), conn)
 				mutexMessage.Lock()
 				for _, msg := range messages {
 					_, errWrite = conn.Write([]byte(msg))
@@ -98,7 +99,7 @@ func HandleClient(conn net.Conn) {
 		}
 		msg, err := reader.ReadString('\n')
 		if err != nil {
-			SendMessage(fmt.Sprintf("%s has left our chat...\n", username), conn)
+			SendMessage(fmt.Sprintf("​🔴 %s has left our chat...\n", username), conn)
 			mutexClient.Lock()
 			delete(clients, conn)
 			mutexClient.Unlock()
@@ -106,7 +107,7 @@ func HandleClient(conn net.Conn) {
 		}
 		msg = strings.TrimSpace(msg)
 		if len(msg) > 2000 {
-			_, errWrite = conn.Write([]byte("You can't write a message over 2000 letters\n"))
+			_, errWrite = conn.Write([]byte("❌​ You can't write a message over 2000 letters\n"))
 			if errWrite != nil {
 				fmt.Println(errWrite)
 				return

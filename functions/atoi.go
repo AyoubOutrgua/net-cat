@@ -1,5 +1,6 @@
 package functions
 
+// Atoi function convert a string to an integer
 func Atoi(s string) int {
 	number := 0
 	for i := 0; i < len(s); i++ {

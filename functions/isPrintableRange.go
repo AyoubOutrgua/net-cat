@@ -1,5 +1,6 @@
 package functions
 
+// Checking if the message or username is valid
 func IsPrintableRange(nameORmsg string) bool {
 	if nameORmsg == "" {
 		return false
