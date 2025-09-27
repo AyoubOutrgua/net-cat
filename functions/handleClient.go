@@ -50,7 +50,7 @@ func HandleClient(conn net.Conn) {
 				fmt.Println(errWrite)
 				return
 			}
-			_, errWrite = conn.Write([]byte("[ENTER YOUR NAME]: "))
+			_, errWrite = conn.Write([]byte("\033[0m[ENTER YOUR NAME]: "))
 			if errWrite != nil {
 				fmt.Println(errWrite)
 				return
